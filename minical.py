@@ -125,7 +125,8 @@ def compile_image(path, framewidth=10, reso=(2560, 1440), crop=0, inv_cols=False
     # load image
     img = Image.open(path)
     # crop image
-    crop += 1080 - img.size[1]
+    if img.size[1] > 1080:
+        crop += img.size[1] - 1080
     img = img.crop((crop//2, crop//2, img.size[0]-crop//2, img.size[1]-crop//2))
     base_img = Image.new('RGB', reso, (255, 255, 255))
     # paste image at 740, 180
@@ -173,7 +174,7 @@ def setwall(path):
     os.system(setwall)
 
 
-fu = download_day(day='random')
+fu = download_day(day='180626')
 chosen_fu = fu[0]#random.choice(fu)
 img = compile_image(chosen_fu, reso=(1920, 1080), crop=100, inv_cols=False)
 setwall(img)
