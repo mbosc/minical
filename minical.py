@@ -10,6 +10,7 @@ from collections import namedtuple
 from math import sqrt
 import numpy as np
 import random
+from argparse import ArgumentParser
 
 Point = namedtuple('Point', ('coords', 'n', 'ct'))
 Cluster = namedtuple('Cluster', ('points', 'center', 'n'))
@@ -125,8 +126,8 @@ def compile_image(path, framewidth=10, reso=(2560, 1440), crop=0, inv_cols=False
     # load image
     img = Image.open(path)
     # crop image
-    if img.size[1] > 1080:
-        crop += img.size[1] - 1080
+    if img.size[1] > reso[1]:
+        crop += img.size[1] - reso[1]
     img = img.crop((crop//2, crop//2, img.size[0]-crop//2, img.size[1]-crop//2))
     base_img = Image.new('RGB', reso, (255, 255, 255))
     # paste image at 740, 180
@@ -145,10 +146,21 @@ def compile_image(path, framewidth=10, reso=(2560, 1440), crop=0, inv_cols=False
     base_img.save('compiled_{}.png'.format(path.split('/')[-1]))
     return os.path.abspath('compiled_{}.png'.format(path.split('/')[-1]))
 
-def setwall(path):
+def setwall(path, multi=False):
     # if mac
     if sys.platform == 'darwin':
-        setwall = 'osascript -e \'tell application "Finder" to set desktop picture to POSIX file "{}"\''
+        if multi:
+            raise NotImplementedError('Multi-monitor not implemented for mac')
+# tell application "System Events"
+#     set desktopCount to count of desktops
+#     repeat with desktopNumber from 1 to desktopCount
+#         tell desktop desktopNumber
+#             set picture to "/Library/Desktop Pictures/Beach.jpg"
+#         end tell
+#     end repeat
+# end tell
+        else:    
+            setwall = 'osascript -e \'tell application "Finder" to set desktop picture to POSIX file "{}"\''.format(path)
     # if linux
     elif sys.platform.startswith('linux'):
         # if gnome
@@ -174,7 +186,34 @@ def setwall(path):
     os.system(setwall)
 
 
-fu = download_day(day='180626')
-chosen_fu = fu[0]#random.choice(fu)
-img = compile_image(chosen_fu, reso=(1920, 1080), crop=100, inv_cols=False)
-setwall(img)
+if __name__ == '__main__':
+    curpath = os.path.dirname(os.path.realpath(__file__))
+    parser = ArgumentParser(description='Download and set wallpaper from miniature-calendar.com')
+    parser.add_argument('-d', '--date', type=str, help='Date in YYMMDD format', default=None)
+    parser.add_argument('-t', '--today', action='store_true', help='Set today\'s wallpaper', default=False)
+    parser.add_argument('-rnd', '--random', action='store_true' ,help='Set random wallpaper', default=False)
+    parser.add_argument('-f', '--folder', type=str, help='Folder to save images', default=os.join(curpath, 'data'))
+    parser.add_argument('-res', '--resolution', type=str, help='Resolution of the wallpaper', default='1920x1080')
+    parser.add_argument('-c', '--crop', type=int, help='Crop the image by this amount', default=100)
+    parser.add_argument('-i', '--invert', action='store_true', help='Invert the colors')
+    parser.add_argument('-fw', '--framewidth', type=int, help='Width of the frame', default=10)
+    parser.add_argument('-m', '--multiscreen', action='store_true', help='Set wallpaper for all screens', default=False)
+    parser.add_argument('-sf', '--set-first', action='store_true', help='Set the first of today, else random', default=False)
+    args = parser.parse_args()
+
+    # exactly one of date, today, random can be set
+    if sum([args.date is not None, args.today, args.random]) != 1:
+        raise Exception('Exactly one of date, today, random must be set')
+    # assert resolution is valid
+    if not re.match(r'\d+x\d+', args.resolution):
+        raise Exception('Resolution must be in the format WxH')
+    
+    day = args.date if args.date is not None else 'today' if args.today else 'random'
+    fu = download_day(day=day, folder=args.folder)
+    if args.set_first:
+        chosen_fu = fu[0]
+    else:
+        chosen_fu = random.choice(fu)
+    reso = tuple([int(x) for x in args.resolution.split('x')])
+    img = compile_image(chosen_fu, reso=reso, crop=args.crop, inv_cols=args.invert, framewidth=args.framewidth)
+    setwall(img)
