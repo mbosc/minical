@@ -1,3 +1,6 @@
+# TODO
+# use xrandr --listmonitors to parse screen sizes and automatically tile
+
 import datetime
 import re
 import requests
@@ -185,14 +188,13 @@ def setwall(path, multi=False):
         raise Exception(f'Unsupported platform {sys.platform}')
     os.system(setwall)
 
-
 if __name__ == '__main__':
     curpath = os.path.dirname(os.path.realpath(__file__))
     parser = ArgumentParser(description='Download and set wallpaper from miniature-calendar.com')
     parser.add_argument('-d', '--date', type=str, help='Date in YYMMDD format', default=None)
     parser.add_argument('-t', '--today', action='store_true', help='Set today\'s wallpaper', default=False)
     parser.add_argument('-rnd', '--random', action='store_true' ,help='Set random wallpaper', default=False)
-    parser.add_argument('-f', '--folder', type=str, help='Folder to save images', default=os.join(curpath, 'data'))
+    parser.add_argument('-f', '--folder', type=str, help='Folder to save images', default=os.path.join(curpath, 'data'))
     parser.add_argument('-res', '--resolution', type=str, help='Resolution of the wallpaper', default='1920x1080')
     parser.add_argument('-c', '--crop', type=int, help='Crop the image by this amount', default=100)
     parser.add_argument('-i', '--invert', action='store_true', help='Invert the colors')
@@ -202,6 +204,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # exactly one of date, today, random can be set
+    if sum([args.date is not None, args.today, args.random]) == 0:
+        args.today = True
     if sum([args.date is not None, args.today, args.random]) != 1:
         raise Exception('Exactly one of date, today, random must be set')
     # assert resolution is valid
