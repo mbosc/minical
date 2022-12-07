@@ -201,6 +201,7 @@ if __name__ == '__main__':
     parser.add_argument('-fw', '--framewidth', type=int, help='Width of the frame', default=10)
     parser.add_argument('-m', '--multiscreen', action='store_true', help='Set wallpaper for all screens', default=False)
     parser.add_argument('-sf', '--set-first', action='store_true', help='Set the first of today, else random', default=False)
+    parser.add_argument('-tele', '--telegram-daemon', action='store_true', help='launch telegram bot daemon', default=False)
     args = parser.parse_args()
 
     # exactly one of date, today, random can be set
@@ -214,10 +215,15 @@ if __name__ == '__main__':
     
     day = args.date if args.date is not None else 'today' if args.today else 'random'
     fu = download_day(day=day, folder=args.folder)
-    if args.set_first:
-        chosen_fu = fu[0]
+    if not args.telegram_daemon:
+        if args.set_first:
+            chosen_fu = fu[0]
+        else:
+            chosen_fu = random.choice(fu)
+        reso = tuple([int(x) for x in args.resolution.split('x')])
+        img = compile_image(chosen_fu, reso=reso, crop=args.crop, inv_cols=args.invert, framewidth=args.framewidth)
+        setwall(img)
     else:
-        chosen_fu = random.choice(fu)
-    reso = tuple([int(x) for x in args.resolution.split('x')])
-    img = compile_image(chosen_fu, reso=reso, crop=args.crop, inv_cols=args.invert, framewidth=args.framewidth)
-    setwall(img)
+        from minical_bot import pyHerald
+        for fu_ in fu:
+            pyHerald.oneshotpic(fu_, 'Miniature Calendar - day')
